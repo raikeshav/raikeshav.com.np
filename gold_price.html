@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold & Silver · dynamic chart (secondary Y)</title>
+    <!-- Chart.js 3 with date adapter -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            padding: 28px 24px 20px;
+            max-width: 1100px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        h2 {
+            font-weight: 500;
+            font-size: 1.6rem;
+            margin-top: 0;
+            margin-bottom: 6px;
+            color: #0b1a33;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .sub {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #334155;
+            border-bottom: 1px solid #e9edf2;
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .sub span {
+            background: #f1f5f9;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        .legend-note {
+            display: flex;
+            gap: 24px;
+            font-size: 0.85rem;
+            background: #f8fafc;
+            padding: 6px 16px;
+            border-radius: 40px;
+        }
+        .legend-note i {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            margin-right: 6px;
+        }
+        .gold-dot { background: #f59e0b; }
+        .silver-dot { background: #6b7280; }
+        .chart-wrapper {
+            position: relative;
+            height: 420px;
+            margin-top: 4px;
+        }
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .footnote {
+            margin-top: 16px;
+            color: #475569;
+            font-size: 0.8rem;
+            border-top: 1px solid #eef2f6;
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: #eef2ff;
+            color: #4338ca;
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        @media (max-width: 600px) {
+            .chart-card { padding: 16px; }
+            .legend-note { flex-wrap: wrap; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="chart-card">
+    <h2>📊 Gold & Silver · daily tola price</h2>
+    <div class="sub">
+        <div class="legend-note">
+            <span><i class="gold-dot"></i> Gold (primary Y)</span>
+            <span><i class="silver-dot"></i> Silver (secondary Y)</span>
+        </div>
+        <span>📅 23 Jul – 4 Sep 2026</span>
+    </div>
+    <div class="chart-wrapper">
+        <canvas id="priceChart"></canvas>
+    </div>
+    <div class="footnote">
+        <span>⚡ Silver on secondary Y‑axis · dynamic</span>
+    </div>
+</div>
+<script>
+    (function() {
+        // ----- raw data (as provided) -----
+        const raw = [
+            { date: "4/9/2026", gold: "Rs 3,07,400", silver: "Rs 4,765" },
+            { date: "3/9/2026", gold: "Rs 3,04,900", silver: "Rs 4,725" },
+            { date: "2/9/2026", gold: "Rs 2,97,300", silver: "Rs 4,580" },
+            { date: "1/9/2026", gold: "Rs 3,06,100", silver: "Rs 4,765" },
+            { date: "31/8/2026", gold: "Rs 3,06,600", silver: "Rs 4,780" },
+            { date: "30/8/2026", gold: "Rs 3,09,000", silver: "Rs 4,780" },
+            { date: "29/8/2026", gold: " 318,500 ", silver: " 4,965 " },
+            { date: "27/8/2026", gold: "Rs 3,20,900", silver: "Rs 4,965" },
+            { date: "26/8/2026", gold: "Rs 3,22,100", silver: "Rs 4,975" },
+            { date: "25/8/2026", gold: "Rs 3,22,200", silver: "Rs 4,900" },
+            { date: "24/8/2026", gold: "Rs 3,22,700", silver: "Rs 4,965" },
+            { date: "23/8/2026", gold: "Rs 3,19,500", silver: "Rs 4,975" },
+            { date: "21/8/2026", gold: "Rs 3,16,700", silver: "Rs 4,985" },
+            { date: "20/8/2026", gold: "Rs 3,13,400", silver: "Rs 4,855" },
+            { date: "19/8/2026", gold: "Rs 3,04,100", silver: "Rs 4,595" },
+            { date: "18/8/2026", gold: "Rs 3,06,800", silver: "Rs 4,755" },
+            { date: "17/8/2026", gold: "Rs 3,06,800", silver: "Rs 4,770" },
+            { date: "16/8/2026", gold: "Rs 3,05,200", silver: "Rs 4,710" },
+            { date: "14/8/2026", gold: "Rs 3,01,600", silver: "Rs 4,660" },
+            { date: "12/8/2026", gold: "Rs 3,06,700", silver: "Rs 4,745" },
+            { date: "11/8/2026", gold: "Rs 3,07,900", silver: "Rs 4,780" },
+            { date: "10/8/2026", gold: "Rs 3,01,500", silver: "Rs 4,670" },
+            { date: "9/8/2026", gold: "Rs 3,01,700", silver: "Rs 4,645" },
+            { date: "7/8/2026", gold: "Rs 2,96,900", silver: "Rs 4,580" },
+            { date: "6/8/2026", gold: "Rs 2,96,000", silver: "Rs 4,570" },
+            { date: "5/8/2026", gold: "Rs 2,88,000", silver: "Rs 4,475" },
+            { date: "4/8/2026", gold: "Rs 2,83,800", silver: "Rs 4,380" },
+            { date: "3/8/2026", gold: "Rs 2,84,000", silver: "Rs 4,350" },
+            { date: "2/8/2026", gold: "Rs 2,83,200", silver: "Rs 4,315" },
+            { date: "31/7/2026", gold: "Rs 2,85,000", silver: "Rs 4,360" },
+            { date: "30/7/2026", gold: "Rs 2,84,000", silver: "Rs 4,310" },
+            { date: "29/7/2026", gold: "Rs 2,83,200", silver: "Rs 4,320" },
+            { date: "28/7/2026", gold: "Rs 2,84,200", silver: "Rs 4,310" },
+            { date: "27/7/2026", gold: "Rs 2,88,500", silver: "Rs 4,445" },
+            { date: "26/7/2026", gold: "Rs 2,87,100", silver: "Rs 4,410" },
+            { date: "24/7/2026", gold: "Rs 2,85,500", silver: "Rs 4,350" },
+            { date: "23/7/2026", gold: "Rs 2,91,300", silver: "Rs 4,505" }
+        ];
+
+        // ----- parse helpers -----
+        function parseNumeric(value) {
+            // remove "Rs", commas, extra spaces; keep digits and dots
+            const cleaned = String(value).replace(/Rs/gi, '').replace(/,/g, '').replace(/\s/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // date: "3/9/2026" → 3 Sep 2026 (DD/MM/YYYY)
+        function parseDate(str) {
+            const parts = str.split('/');
+            if (parts.length !== 3) return new Date(NaN);
+            // parts: [day, month, year]
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // 0-index
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+
+        // build datasets
+        const goldData = [];
+        const silverData = [];
+        const dateLabels = [];
+
+        raw.forEach(item => {
+            const dateObj = parseDate(item.date);
+            if (isNaN(dateObj.getTime())) return;
+            const goldVal = parseNumeric(item.gold);
+            const silverVal = parseNumeric(item.silver);
+            goldData.push({ x: dateObj, y: goldVal });
+            silverData.push({ x: dateObj, y: silverVal });
+            dateLabels.push(dateObj);
+        });
+
+        // sort chronologically (just in case)
+        const sortFn = (a, b) => a.x.getTime() - b.x.getTime();
+        goldData.sort(sortFn);
+        silverData.sort(sortFn);
+
+        // ----- chart setup (Chart.js v3) -----
+        const ctx = document.getElementById('priceChart').getContext('2d');
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Gold / Tola',
+                        data: goldData,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        borderWidth: 2.8,
+                        pointRadius: 2.5,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1,
+                        tension: 0.15,
+                        yAxisID: 'y',          // primary
+                        order: 1,
+                    },
+                    {
+                        label: 'Silver / Tola',
+                        data: silverData,
+                        borderColor: '#6b7280',
+                        backgroundColor: 'rgba(107, 114, 128, 0.05)',
+                        borderWidth: 2.8,
+                        pointRadius: 2.5,
+                        pointBackgroundColor: '#6b7280',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1,
+                        tension: 0.15,
+                        yAxisID: 'y1',         // secondary
+                        order: 2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false,     // custom legend in HTML
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.9)',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#e2e8f0',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                let val = context.parsed.y;
+                                if (val !== undefined) {
+                                    // format with commas
+                                    const formatted = val.toLocaleString('en-IN');
+                                    return label + ': ₹ ' + formatted;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'dd MMM yyyy',
+                            displayFormats: {
+                                day: 'd MMM'
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.04)',
+                        },
+                        ticks: {
+                            maxRotation: 40,
+                            minRotation: 20,
+                            font: {
+                                size: 11,
+                            },
+                            autoSkip: true,
+                            maxTicksLimit: 18,
+                        },
+                        title: {
+                            display: false,
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            drawOnChartArea: true,
+                            color: 'rgba(0,0,0,0.05)',
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString('en-IN');
+                            },
+                            font: {
+                                size: 11,
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Gold (₹ / Tola)',
+                            color: '#f59e0b',
+                            font: {
+                                weight: '500',
+                                size: 12,
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,   // avoid clutter
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString('en-IN');
+                            },
+                            font: {
+                                size: 11,
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Silver (₹ / Tola)',
+                            color: '#6b7280',
+                            font: {
+                                weight: '500',
+                                size: 12,
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        borderJoinStyle: 'round',
+                    }
+                }
+            }
+        });
+
+        // (optional) expose chart for console debugging
+        window.priceChart = chart;
+    })();
+</script>
+</body>
+</html>
